@@ -20,6 +20,7 @@
 
 #include "catalog/catalog.h"
 #include "concurrency/transaction.h"
+#include "concurrency/transaction_manager.h"
 #include "execution/check_options.h"
 #include "execution/executors/abstract_executor.h"
 #include "storage/page/tmp_tuple_page.h"

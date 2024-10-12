@@ -26,6 +26,8 @@
 #include "storage/table/tuple.h"
 #include "type/value_factory.h"
 
+#include "type/type_id.h"
+
 namespace bustub {
 
 /**
@@ -72,12 +74,59 @@ class SimpleAggregationHashTable {
    */
   void CombineAggregateValues(AggregateValue *result, const AggregateValue &input) {
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
+      auto v_ori = result->aggregates_[i].GetAs<int32_t>();
+      auto in = input.aggregates_[i].GetAs<int32_t>();
       switch (agg_types_[i]) {
+          // 可能是aggr[i]，只存被aggr操作后的value，输出也是这些value
         case AggregationType::CountStarAggregate:
+          //          auto v = result->aggregates_[0].GetAs<int32_t>();
+          //          std::cout << v_ori << std::endl;
+          //          if(in != ValueFactory::GetIntegerValue(0).GetAs<int32_t>())
+          v_ori++;
+          result->aggregates_[i] = ValueFactory::GetIntegerValue(v_ori);
+          break;
         case AggregationType::CountAggregate:
+          if (v_ori == ValueFactory::GetNullValueByType(INTEGER).GetAs<int32_t>()) {
+            v_ori = 0;
+          }
+          if (in != ValueFactory::GetNullValueByType(INTEGER).GetAs<int32_t>()) {
+            v_ori++;
+          }
+          result->aggregates_[i] = ValueFactory::GetIntegerValue(v_ori);
+          break;
         case AggregationType::SumAggregate:
+          //          auto v_sum = result->aggregates_[0].GetAs<int32_t>();
+          if (v_ori == ValueFactory::GetNullValueByType(INTEGER).GetAs<int32_t>()) {
+            v_ori = 0;
+          }
+          //          auto in = input.aggregates_[0].GetAs<int32_t>();
+          if (in != ValueFactory::GetNullValueByType(INTEGER).GetAs<int32_t>()) {
+            v_ori = v_ori + in;
+          }
+          result->aggregates_[i] = ValueFactory::GetIntegerValue(v_ori);
+          break;
         case AggregationType::MinAggregate:
+          //          auto v_ori = result->aggregates_[0].GetAs<int32_t>();
+          if (v_ori == ValueFactory::GetNullValueByType(INTEGER).GetAs<int32_t>()) {
+            v_ori = INT32_MAX;
+          }
+          //          auto in = input.aggregates_[0].GetAs<int32_t>();
+          if (in != ValueFactory::GetNullValueByType(INTEGER).GetAs<int32_t>()) {
+            v_ori = v_ori < in ? v_ori : in;
+          }
+          //          std::cout << "min " << v_ori << std::endl;
+          result->aggregates_[i] = ValueFactory::GetIntegerValue(v_ori);
+          break;
         case AggregationType::MaxAggregate:
+          //          auto v_ori = result->aggregates_[0].GetAs<int32_t>();
+          if (v_ori == ValueFactory::GetNullValueByType(INTEGER).GetAs<int32_t>()) {
+            v_ori = INT32_MIN;
+          }
+          //          auto in = input.aggregates_[0].GetAs<int32_t>();
+          if (in != ValueFactory::GetNullValueByType(INTEGER).GetAs<int32_t>()) {
+            v_ori = v_ori > in ? v_ori : in;
+          }
+          result->aggregates_[i] = ValueFactory::GetIntegerValue(v_ori);
           break;
       }
     }
@@ -92,6 +141,7 @@ class SimpleAggregationHashTable {
     if (ht_.count(agg_key) == 0) {
       ht_.insert({agg_key, GenerateInitialAggregateValue()});
     }
+
     CombineAggregateValues(&ht_[agg_key], agg_val);
   }
 
@@ -203,9 +253,14 @@ class AggregationExecutor : public AbstractExecutor {
   std::unique_ptr<AbstractExecutor> child_executor_;
 
   /** Simple aggregation hash table */
-  // TODO(Student): Uncomment SimpleAggregationHashTable aht_;
+  // TODO(Student): Uncomment
+  SimpleAggregationHashTable aht_;
 
   /** Simple aggregation hash table iterator */
-  // TODO(Student): Uncomment SimpleAggregationHashTable::Iterator aht_iterator_;
+  // TODO(Student): Uncomment
+  SimpleAggregationHashTable::Iterator aht_iterator_;
+  bool is_aggr_{false};
+
+  Schema out_schema_;
 };
 }  // namespace bustub

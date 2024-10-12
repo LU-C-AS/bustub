@@ -13,9 +13,13 @@
 #pragma once
 
 #include <future>  // NOLINT
+#include <list>
 #include <optional>
+// #include <set>
 #include <thread>  // NOLINT
+#include <unordered_map>
 
+#include <mutex>  // NOLINT
 #include "common/channel.h"
 #include "storage/disk/disk_manager.h"
 
@@ -90,6 +94,21 @@ class DiskScheduler {
    * `std::nullopt` is put into the queue to signal to the background thread to stop execution. */
   Channel<std::optional<DiskRequest>> request_queue_;
   /** The background thread responsible for issuing scheduled requests to the disk manager. */
-  std::optional<std::thread> background_thread_;
+  std::vector<std::optional<std::thread>> background_thread_;
+
+  //  std::set<page_id_t> page_set_;
+  //  typedef struct {
+  //    page_id_t page_id_;
+  //    bool is_write_;
+  //    std::mutex lock;
+  //  } req;
+  std::unordered_map<page_id_t, std::unique_ptr<Channel<DiskRequest>>> page_q_;
+  //  std::unordered_map<page_id_t, std::unique_ptr<std::mutex>> locks_;
+
+  auto GetTask(page_id_t pid, DiskRequest *task) {
+    //    std::lock_guard<std::mutex> lock(*locks_[pid]);
+    *task = page_q_[pid]->Get();
+    //    page_q_[pid].pop_front();
+  }
 };
 }  // namespace bustub

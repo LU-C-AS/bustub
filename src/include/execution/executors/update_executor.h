@@ -66,5 +66,9 @@ class UpdateExecutor : public AbstractExecutor {
 
   /** The child executor to obtain value from */
   std::unique_ptr<AbstractExecutor> child_executor_;
+
+  bool is_updated_{false};
+  std::vector<std::pair<Tuple, RID>> tuples_;
+  std::vector<std::pair<Tuple, RID>>::const_iterator iter_;
 };
 }  // namespace bustub

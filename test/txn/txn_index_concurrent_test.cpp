@@ -96,9 +96,9 @@ TEST(TxnIndexTest, DISABLED_IndexConcurrentInsertTest) {  // NOLINT
   }
 }
 
-TEST(TxnIndexTest, DISABLED_IndexConcurrentUpdateTest) {  // NOLINT
+TEST(TxnIndexTest, IndexConcurrentUpdateTest) {  // NOLINT
   const auto generate_sql = [](int thread_id, int n) -> std::string {
-    return fmt::format("UPDATE maintable SET b = b + {} WHERE a = {}", (1 << thread_id), n);
+    return fmt::format("UPDATE maintable SET b = b + {} WHERE a = {}", (1 + thread_id), n);
   };
   const auto generate_select_sql = [](int n) -> std::string {
     return fmt::format("SELECT b FROM maintable WHERE a = {}", n);
@@ -123,7 +123,7 @@ TEST(TxnIndexTest, DISABLED_IndexConcurrentUpdateTest) {  // NOLINT
     EnsureIndexScan(*bustub);
     Execute(*bustub, "CREATE TABLE maintable(a int primary key, b int)");
     std::vector<std::thread> update_threads;
-    const int thread_cnt = 8;
+    const int thread_cnt = 100;
     const int number_cnt = 20;
     Execute(*bustub, generate_insert_sql(number_cnt), false);
     TableHeapEntryNoMoreThan(*bustub, bustub->catalog_->GetTable("maintable"), number_cnt);
@@ -176,7 +176,8 @@ TEST(TxnIndexTest, DISABLED_IndexConcurrentUpdateTest) {  // NOLINT
       int winner = 0;
       for (int j = 0; j < thread_cnt; j++) {
         if (operation_result[j][i]) {
-          winner += (1 << j);
+          std::cout << i << " " << j << std::endl;
+          winner += (1 + j);
         }
       }
       expected_rows.push_back({i, winner});

@@ -12,10 +12,13 @@
 
 #pragma once
 
+#include <functional>
 #include <limits>
 #include <list>
 #include <mutex>  // NOLINT
+#include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "common/config.h"
@@ -26,14 +29,169 @@ namespace bustub {
 enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 
 class LRUKNode {
+ public:
+  LRUKNode() = default;
+  LRUKNode(size_t k, frame_id_t fid) : k_{k}, fid_{fid} {}
+  auto GetFid() const -> frame_id_t { return fid_; }
+  auto UpdateTime(size_t time) -> void {
+    // size?
+    history_.emplace_back(time);
+    if (history_.size() > k_) {
+      //      printf("size k\n");
+      history_.pop_front();
+    }
+  }
+  auto GetHistory() const -> size_t {
+    //    printf("%zu\n",history_.size());
+    return history_.size();  //?
+  }
+  auto GetTime() -> size_t {
+    if (history_.size() < k_) {
+      return 0;
+    }
+    return history_.front();
+  }
+  void ClearHistory() { history_.clear(); }
+  void SetEvict(bool t) { is_evictable_ = t; }
+  auto GetEvict() -> bool { return is_evictable_; }
+
  private:
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
 
-  [[maybe_unused]] std::list<size_t> history_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] frame_id_t fid_;
-  [[maybe_unused]] bool is_evictable_{false};
+  std::list<size_t> history_;
+  size_t k_;
+  frame_id_t fid_;
+  bool is_evictable_{false};  // false initially
+};
+class LRUNode {
+ public:
+  LRUNode() {
+    // node = std::make_unique<LRUKNode>();
+    next_ = prev_ = nullptr;
+  }
+  LRUNode(size_t k, frame_id_t fid) {
+    node_ = LRUKNode(k, fid);
+    next_ = prev_ = nullptr;
+  }
+  LRUNode *next_, *prev_;
+  AccessType type_;
+  //  bool enable_out_{true};
+  LRUKNode node_;
+  void Evict() {
+    if (this->next_ != nullptr && this->prev_ != nullptr) {
+      this->next_->prev_ = this->prev_;
+      this->prev_->next_ = this->next_;
+      this->next_ = nullptr;
+      this->prev_ = nullptr;
+    }
+  };
+};
+// void LRUNode::evict(){
+//   this->next_->prev_=this->prev;
+//   this->prev_->next_=this->next;
+//   this->next_= nullptr;
+//   this->prev_= nullptr;
+// }
+
+class LRU {
+  // 可以改成set实现
+ public:
+  LRU() {
+    head_ = new LRUNode;
+    head_->prev_ = head_->next_ = head_;
+  }
+  ~LRU() { delete head_; }
+  auto SelectVictim() -> LRUNode * {
+    if (head_->next_ == head_) {
+      return nullptr;
+    }
+
+    LRUNode *p = head_->prev_;
+    head_->prev_ = p->prev_;
+    p->prev_->next_ = head_;
+    p->next_ = nullptr;
+    p->prev_ = nullptr;
+    while (p->type_ == AccessType::Lookup || p->type_ == AccessType::Index) {
+      p->next_ = head_->next_;
+      head_->next_->prev_ = p;
+      p->prev_ = head_;
+      head_->next_ = p;
+
+      p = head_->prev_;
+      head_->prev_ = p->prev_;
+      p->prev_->next_ = head_;
+      p->next_ = nullptr;
+      p->prev_ = nullptr;
+
+      p->type_ = AccessType::Scan;
+    }
+    //    printf("vic %d\n",head_->prev_->node.get_fid());
+
+    return p;
+  };
+  void MoveLRU(LRUNode *p) {
+    if (head_->next_ == head_->prev_) {
+      return;
+    }
+    //    if(p->next_&&p->prev_) {  //可能不在链表里
+    p->next_->prev_ = p->prev_;
+    p->prev_->next_ = p->next_;
+    //    }
+    auto tmp = head_->next_;
+    while (p->node_.GetTime() < tmp->node_.GetTime()) {
+      tmp = tmp->next_;
+      if (tmp == head_) {
+        break;
+      }
+    }
+    p->prev_ = tmp->prev_;
+    p->next_ = tmp;
+    tmp->prev_->next_ = p;
+    tmp->prev_ = p;
+
+    //    printf("move ");
+    //    for (auto x = head_->next_; x != head_; x = x->next_) {
+    //      printf("%d:%zu ", x->node_.GetFid(), x->node_.GetTime());
+    //
+    //    }
+  };
+  void InsertLRU(LRUNode *p) {
+    if (p->next_ != nullptr) {
+      //            printf(" in %d next_ %d\n", p->node_.get_fid(),p->next->node.get_fid());
+      p->next_->prev_ = p->prev_;
+      p->prev_->next_ = p->next_;
+    }
+    if (head_->next_ == head_) {
+      //      printf("%d\n",p->node_.GetFid());
+      p->next_ = head_->next_;
+      p->prev_ = head_;
+      head_->next_->prev_ = p;
+      head_->next_ = p;
+      return;
+      //      }
+    }
+    auto tmp = head_->next_;
+    while (p->node_.GetTime() < tmp->node_.GetTime()) {
+      tmp = tmp->next_;
+      if (tmp == head_) {
+        break;
+      }
+    }
+    p->prev_ = tmp->prev_;
+    p->next_ = tmp;
+    tmp->prev_->next_ = p;
+    tmp->prev_ = p;
+    //    printf("insert ");
+    //    for (auto x = head_->next_; x != head_; x = x->next_) {
+    //      printf("%d:%zu ", x->node_.GetFid(), x->node_.GetTime());
+    //    }
+  };
+
+ private:
+  LRUNode *head_;
+  //  int type_; //0 LRU, 1 LRU-K;
+  //  std::mutex latch_;
 };
 
 /**
@@ -65,7 +223,8 @@ class LRUKReplacer {
    *
    * @brief Destroys the LRUReplacer.
    */
-  ~LRUKReplacer() = default;
+  //  ~LRUKReplacer() = default;
+  ~LRUKReplacer();
 
   /**
    * TODO(P1): Add implementation
@@ -150,12 +309,39 @@ class LRUKReplacer {
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  [[maybe_unused]] std::unordered_map<frame_id_t, LRUKNode> node_store_;
-  [[maybe_unused]] size_t current_timestamp_{0};
+  // 只有evictable的frame才加入以下两条链表
+  // 维护集合
+
+  //  std::function<bool(LRUKNode &, LRUKNode &)> comp_ = [](LRUKNode &n1, LRUKNode &n2) {
+  //    if (n1.GetTime() >= n2.GetTime()) {
+  //      return true;
+  //    }
+  //    return false;
+  //  };
+
+  //  std::set<frame_id_t, std::function<bool(frame_id_t, frame_id_t)>> nk_l_;
+  //  std::set<frame_id_t, std::function<bool(frame_id_t, frame_id_t)>> k_l_;
+
+  std::unordered_set<frame_id_t> nk_nodes_;
+  std::unordered_set<frame_id_t> k_nodes_;
+  //  std::set<frame_id_t> pinned_node;
+  //  std::unordered_map<frame_id_t, LRUNode*> node_store_;
+  // 没到k次的链表
+  LRU *nk_list_;
+  //  // k次的链表
+  LRU *k_list_;
+  // 不可置换的frame的链表
+  //   LRU *free_list;
+  //   std::list<LRUKNode*> *nevict_list;
+  LRUNode *nodes_;
+  //  LRUKNode *nodes_;
+  size_t current_timestamp_{0};
   [[maybe_unused]] size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
+  // 可置换的frame数量
+  size_t replacer_size_{0};
+  size_t num_frames_;
   [[maybe_unused]] size_t k_;
-  [[maybe_unused]] std::mutex latch_;
+  std::mutex latch_;
 };
 
 }  // namespace bustub

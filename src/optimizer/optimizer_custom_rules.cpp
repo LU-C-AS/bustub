@@ -9,6 +9,7 @@ namespace bustub {
 
 auto Optimizer::OptimizeCustom(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef {
   auto p = plan;
+  std::cout << "opt custum\n";
   p = OptimizeMergeProjection(p);
   p = OptimizeMergeFilterNLJ(p);
   p = OptimizeNLJAsHashJoin(p);
@@ -16,6 +17,7 @@ auto Optimizer::OptimizeCustom(const AbstractPlanNodeRef &plan) -> AbstractPlanN
   p = OptimizeSortLimitAsTopN(p);
   p = OptimizeMergeFilterScan(p);
   p = OptimizeSeqScanAsIndexScan(p);
+
   return p;
 }
 

@@ -189,6 +189,8 @@ class ExtendibleHTableDirectoryPage {
    */
   void PrintDirectory() const;
 
+  //  void CheckShrink();
+
  private:
   uint32_t max_depth_;
   uint32_t global_depth_;

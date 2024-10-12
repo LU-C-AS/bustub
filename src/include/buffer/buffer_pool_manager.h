@@ -180,6 +180,7 @@ class BufferPoolManager {
 
   /** Array of buffer pool pages. */
   Page *pages_;
+  //  std::mutex page_lock_;
   /** Pointer to the disk sheduler. */
   std::unique_ptr<DiskScheduler> disk_scheduler_ __attribute__((__unused__));
   /** Pointer to the log manager. Please ignore this for P1. */
@@ -192,6 +193,15 @@ class BufferPoolManager {
   std::list<frame_id_t> free_list_;
   /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
   std::mutex latch_;
+
+  //  std::shared_mutex table_latch_;
+  //  std::atomic<bool> prefetch_done_;
+  //  std::list<int> prefetch_tasks_;
+  //  std::condition_variable cv;
+  //  std::mutex q_lk_;
+  //
+  //  void PrefetchWorker();
+  std::mutex *page_latch_;
 
   /**
    * @brief Allocate a page on disk. Caller should acquire the latch before calling this function.
